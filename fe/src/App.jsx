@@ -15,15 +15,10 @@ function App() {
         <Routes>
           {/* Customer Routes */}
           <Route path="/" element={<Order />} />
-
-          {/* Admin Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/products" element={<AdminProduct />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
-
-          {/* Legacy Routes */}
-          <Route path="/admin/product" element={<AdminProduct />} />
         </Routes>
       </BrowserRouter>
     </NotificationProvider>
