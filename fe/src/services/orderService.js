@@ -5,6 +5,16 @@ export const createOrder = async (orderData) => {
   try {
     console.log("Creating order:", orderData);
 
+    const now = new Date().toISOString();
+    const timeline = [
+      {
+        status: "pending",
+        timestamp: now,
+        description: "Đơn hàng đã được tạo",
+        actor: "staff",
+      },
+    ];
+
     const { data: order, error } = await supabase
       .from("order")
       .insert([
@@ -14,6 +24,8 @@ export const createOrder = async (orderData) => {
           items: orderData.items, // Lưu toàn bộ items dưới dạng JSON
           sourcePayment: orderData.sourcePayment, // Lưu thông tin thanh toán
           isCancelled: false,
+          status: "pending", // pending, preparing, completed, cancelled
+          time_line: timeline,
         },
       ])
       .select()
@@ -52,26 +64,87 @@ export const getAllOrders = async () => {
   }
 };
 
-// Cập nhật trạng thái hủy đơn hàng
-export const cancelOrder = async (orderId) => {
+// Cập nhật trạng thái đơn hàng
+export const updateOrderStatus = async (
+  orderId,
+  newStatus,
+  actor = "kitchen"
+) => {
   try {
+    // Lấy đơn hàng hiện tại để cập nhật timeline
+    const { data: currentOrder, error: fetchError } = await supabase
+      .from("order")
+      .select("time_line")
+      .eq("order_id", orderId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching current order:", fetchError);
+      throw fetchError;
+    }
+
+    const now = new Date().toISOString();
+    const statusDescriptions = {
+      pending: "Đơn hàng đã được tạo",
+      preparing: "Nhà bếp đang chuẩn bị",
+      completed: "Đơn hàng đã hoàn thành",
+      cancelled: "Đơn hàng đã bị hủy",
+    };
+
+    const newTimelineEntry = {
+      status: newStatus,
+      timestamp: now,
+      description: statusDescriptions[newStatus] || `Trạng thái: ${newStatus}`,
+      actor: actor,
+    };
+
+    const updatedTimeline = [
+      ...(currentOrder.time_line || []),
+      newTimelineEntry,
+    ];
+
+    const updateData = {
+      status: newStatus,
+      time_line: updatedTimeline,
+    };
+
+    // Nếu là cancelled, cập nhật isCancelled
+    if (newStatus === "cancelled") {
+      updateData.isCancelled = true;
+    }
+
     const { data: order, error } = await supabase
       .from("order")
-      .update({ isCancelled: true })
+      .update(updateData)
       .eq("order_id", orderId)
       .select()
       .single();
 
     if (error) {
-      console.error("Error cancelling order:", error);
+      console.error("Error updating order status:", error);
       throw error;
     }
 
     return order;
   } catch (error) {
-    console.error("Error in cancelOrder:", error);
+    console.error("Error in updateOrderStatus:", error);
     throw error;
   }
+};
+
+// Cập nhật trạng thái hủy đơn hàng (backward compatibility)
+export const cancelOrder = async (orderId) => {
+  return updateOrderStatus(orderId, "cancelled", "staff");
+};
+
+// Nhà bếp bắt đầu chuẩn bị đơn hàng
+export const startPreparingOrder = async (orderId) => {
+  return updateOrderStatus(orderId, "preparing", "kitchen");
+};
+
+// Nhà bếp hoàn thành đơn hàng
+export const completeOrder = async (orderId) => {
+  return updateOrderStatus(orderId, "completed", "kitchen");
 };
 
 // Lấy đơn hàng theo ID

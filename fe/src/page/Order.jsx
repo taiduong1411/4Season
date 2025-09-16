@@ -1133,7 +1133,7 @@ function Order() {
                     ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                     : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 active:scale-95"
                 }`}>
-                {isProcessing ? "⏳ Đang xử lý..." : "💳 THANH TOÁN"}
+                {isProcessing ? "⏳ Đang xử lý..." : "LÊN ĐƠN"}
               </button>
             </div>
           )}
@@ -1585,7 +1585,7 @@ function Order() {
                       ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                       : "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 active:scale-95"
                   }`}>
-                  {isProcessing ? "⏳ Đang xử lý..." : "💳 THANH TOÁN"}
+                  {isProcessing ? "⏳ Đang xử lý..." : "LÊN ĐƠN"}
                 </button>
               </div>
             )}

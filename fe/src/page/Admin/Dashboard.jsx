@@ -45,6 +45,7 @@ function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [cancelledOrders, setCancelledOrders] = useState([]);
   const [dateFilter, setDateFilter] = useState("7days"); // 7days, 30days, 90days, all, custom
   const [customDateRange, setCustomDateRange] = useState({
     startDate: "",
@@ -76,15 +77,19 @@ function AdminDashboard() {
     // Subscribe to real-time order updates
     const orderSubscription = subscribeToOrders((payload) => {
       console.log("Dashboard - Order update received:", payload);
+      console.log("Dashboard - Event type:", payload.eventType);
 
       if (payload.eventType === "INSERT") {
         // New order added - reload dashboard data
+        console.log("Dashboard - Reloading data for new order");
         loadDashboardData();
       } else if (payload.eventType === "UPDATE") {
         // Order updated (e.g., cancelled) - reload dashboard data
+        console.log("Dashboard - Reloading data for order update");
         loadDashboardData();
       } else if (payload.eventType === "DELETE") {
         // Order deleted - reload dashboard data
+        console.log("Dashboard - Reloading data for order deletion");
         loadDashboardData();
       }
     });
@@ -131,7 +136,9 @@ function AdminDashboard() {
       ]);
 
       // Filter orders by date and exclude cancelled orders
-      const activeOrders = orders.filter((order) => !order.isCancelled);
+      const activeOrders = orders.filter(
+        (order) => order.status !== "cancelled" && !order.isCancelled
+      );
       const filteredOrders = filterOrdersByDate(activeOrders, dateFilter);
 
       console.log("📊 Dashboard summary:", {
@@ -208,11 +215,50 @@ function AdminDashboard() {
 
       // Lấy 5 đơn hàng gần nhất (không bao gồm đơn bị hủy)
       setRecentOrders(activeOrders.slice(0, 5));
+
+      // Lấy đơn hàng bị hủy
+      const cancelledOrdersList = orders.filter(
+        (order) => order.status === "cancelled" || order.isCancelled
+      );
+      setCancelledOrders(cancelledOrdersList.slice(0, 5));
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStatusInfo = (status) => {
+    const statusMap = {
+      pending: {
+        text: "Chờ xử lý",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: "⏳",
+      },
+      preparing: {
+        text: "Đang chuẩn bị",
+        color: "bg-blue-100 text-blue-800",
+        icon: "👨‍🍳",
+      },
+      completed: {
+        text: "Hoàn thành",
+        color: "bg-green-100 text-green-800",
+        icon: "✅",
+      },
+      cancelled: {
+        text: "Đã hủy",
+        color: "bg-red-100 text-red-800",
+        icon: "❌",
+      },
+    };
+
+    return (
+      statusMap[status] || {
+        text: status || "Chưa xác định",
+        color: "bg-gray-100 text-gray-800",
+        icon: "❓",
+      }
+    );
   };
 
   const filterOrdersByDate = (orders, filter) => {
@@ -854,7 +900,7 @@ function AdminDashboard() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Revenue Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                 <span className="text-white text-lg">📈</span>
@@ -900,7 +946,7 @@ function AdminDashboard() {
           </div>
 
           {/* Payment Method Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
                 <span className="text-white text-lg">💳</span>
@@ -1005,7 +1051,7 @@ function AdminDashboard() {
         {/* Advanced Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Hourly Revenue Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
                 <span className="text-white text-lg">⏰</span>
@@ -1045,7 +1091,7 @@ function AdminDashboard() {
           </div>
 
           {/* Weekly Trends Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center">
                 <span className="text-white text-lg">📅</span>
@@ -1205,7 +1251,7 @@ function AdminDashboard() {
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
               <span className="text-white text-lg">📋</span>
@@ -1262,6 +1308,65 @@ function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* Cancelled Orders */}
+        {cancelledOrders.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-lg">❌</span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Đơn hàng đã hủy
+              </h2>
+            </div>
+
+            <div className="space-y-3">
+              {cancelledOrders.map((order) => (
+                <div
+                  key={order.order_id}
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    setShowOrderDetail(true);
+                  }}
+                  className="bg-red-50 border border-red-200 rounded-xl p-4 cursor-pointer hover:bg-red-100 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-red-100">
+                        <span className="text-lg text-red-600">❌</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">
+                          #{order.order_id.slice(-8)}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {order.table_number} •{" "}
+                          {new Date(order.created_at).toLocaleTimeString(
+                            "vi-VN",
+                            { hour: "2-digit", minute: "2-digit" }
+                          )}{" "}
+                          • {order.items?.length || 0} món
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-red-600">
+                        {order.total_price.toLocaleString("vi-VN")}đ
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {order.sourcePayment?.cash
+                          ? "💵"
+                          : order.sourcePayment?.transfer
+                          ? "🏦"
+                          : "❓"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Order Detail Modal */}
@@ -1271,11 +1376,18 @@ function AdminDashboard() {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 rounded-t-2xl">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">Chi tiết đơn hàng</h2>
-                  <p className="text-blue-100 text-sm">
-                    #{selectedOrder.order_id.slice(-8)}
-                  </p>
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg bg-white/20">
+                    <span className="text-xl text-white">
+                      {getStatusInfo(selectedOrder.status).icon}
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Chi tiết đơn hàng</h2>
+                    <p className="text-blue-100 text-sm">
+                      #{selectedOrder.order_id.slice(-8)}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={closeOrderDetail}
@@ -1300,6 +1412,74 @@ function AdminDashboard() {
                   <p className="font-semibold text-gray-900">
                     {new Date(selectedOrder.created_at).toLocaleString("vi-VN")}
                   </p>
+                </div>
+              </div>
+
+              {/* Order Status */}
+              <div className="bg-gray-50 p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center">
+                    <span className="mr-2">📊</span>
+                    Trạng thái đơn hàng
+                  </h3>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      getStatusInfo(selectedOrder.status).color
+                    }`}>
+                    {getStatusInfo(selectedOrder.status).text}
+                  </span>
+                </div>
+
+                {/* Timeline */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <span className="mr-2">⏰</span>
+                    Timeline
+                  </h4>
+                  {selectedOrder.time_line &&
+                  selectedOrder.time_line.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedOrder.time_line.map((entry, index) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                              entry.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : entry.status === "preparing"
+                                ? "bg-blue-100 text-blue-800"
+                                : entry.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}>
+                            {getStatusInfo(entry.status).icon}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {entry.description}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(entry.timestamp).toLocaleString(
+                                "vi-VN"
+                              )}{" "}
+                              •
+                              {entry.actor === "staff"
+                                ? " 👨‍💼 Nhân viên"
+                                : " 👨‍🍳 Nhà bếp"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 text-sm">
+                        Chưa có timeline cho đơn hàng này
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Timeline sẽ được tạo khi đơn hàng được cập nhật
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

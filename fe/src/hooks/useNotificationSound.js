@@ -2,20 +2,38 @@ import { useCallback, useRef } from "react";
 
 const useNotificationSound = () => {
   const audioContextRef = useRef(null);
+  const isInitializedRef = useRef(false);
 
-  const createNotificationSound = useCallback(() => {
-    try {
-      // Tạo AudioContext nếu chưa có
-      if (!audioContextRef.current) {
+  const initializeAudioContext = useCallback(() => {
+    if (!isInitializedRef.current) {
+      try {
+        console.log("🔊 Initializing AudioContext on user interaction");
         audioContextRef.current = new (window.AudioContext ||
           window.webkitAudioContext)();
+        isInitializedRef.current = true;
+        console.log("🔊 AudioContext initialized successfully");
+      } catch (error) {
+        console.warn("🔊 Failed to initialize AudioContext:", error);
       }
+    } else {
+      console.log("🔊 AudioContext already initialized");
+    }
+  }, []);
+
+  const createNotificationSound = useCallback(() => {
+    if (!audioContextRef.current || !isInitializedRef.current) {
+      console.warn("🔊 AudioContext not available for sound creation");
+      return;
+    }
+
+    try {
+      console.log("🔊 createNotificationSound - Starting sound creation");
 
       const audioContext = audioContextRef.current;
 
-      // Phát âm thanh 3 lần
+      // Phát âm thanh 2 lần
       for (let i = 0; i < 2; i++) {
-        const delay = i * 300; // Mỗi lần cách nhau 400ms
+        const delay = i * 300; // Mỗi lần cách nhau 300ms
 
         setTimeout(() => {
           const oscillator = audioContext.createOscillator();
@@ -79,20 +97,39 @@ const useNotificationSound = () => {
   }, []);
 
   const playNotificationSound = useCallback(() => {
+    console.log("🔊 useNotificationSound - playNotificationSound called");
+
+    // Kiểm tra xem AudioContext đã được initialize chưa
+    if (!isInitializedRef.current) {
+      console.warn(
+        "🔊 AudioContext not initialized, please click on the page first"
+      );
+      return;
+    }
+
     // Kiểm tra xem user đã tương tác với trang chưa (yêu cầu của browser)
     if (
       audioContextRef.current &&
       audioContextRef.current.state === "suspended"
     ) {
-      audioContextRef.current.resume().then(() => {
-        createNotificationSound();
-      });
+      console.log("🔊 AudioContext suspended, resuming...");
+      audioContextRef.current
+        .resume()
+        .then(() => {
+          createNotificationSound();
+        })
+        .catch((error) => {
+          console.warn("🔊 Failed to resume AudioContext:", error);
+          // Fallback: thử phát âm thanh ngay cả khi resume fail
+          createNotificationSound();
+        });
     } else {
+      console.log("🔊 AudioContext ready, creating sound...");
       createNotificationSound();
     }
   }, [createNotificationSound]);
 
-  return { playNotificationSound };
+  return { playNotificationSound, initializeAudioContext };
 };
 
 export default useNotificationSound;

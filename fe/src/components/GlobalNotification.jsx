@@ -1,25 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useGlobalNotification } from "../hooks/useGlobalNotification";
 
 const GlobalNotification = () => {
   const { newOrderNotification, dismissNotification } = useGlobalNotification();
-  const [testNotification, setTestNotification] = useState(null);
 
-  // Listen for test notification events
-  useEffect(() => {
-    const handleTestNotification = (event) => {
-      setTestNotification(event.detail);
-    };
-
-    window.addEventListener("test-notification", handleTestNotification);
-    return () =>
-      window.removeEventListener("test-notification", handleTestNotification);
-  }, []);
-
-  // Use test notification if available, otherwise use real notification
-  const currentNotification = testNotification || newOrderNotification;
-
-  if (!currentNotification) return null;
+  if (!newOrderNotification) return null;
 
   return (
     <div className="fixed top-4 right-4 z-[9999] animate-slide-in">
@@ -32,17 +17,14 @@ const GlobalNotification = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900">
-              {currentNotification.message}
+              {newOrderNotification.message}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {currentNotification.timestamp.toLocaleTimeString("vi-VN")}
+              {newOrderNotification.timestamp.toLocaleTimeString("vi-VN")}
             </p>
           </div>
           <button
-            onClick={() => {
-              setTestNotification(null);
-              dismissNotification();
-            }}
+            onClick={dismissNotification}
             className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
             <span className="text-lg">×</span>
           </button>
